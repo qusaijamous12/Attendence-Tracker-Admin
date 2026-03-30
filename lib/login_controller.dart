@@ -24,6 +24,36 @@ class LoginController extends GetxController {
 
   String? get adminId => currentAdmin.value?.uid;
 
+  Future<bool> restoreSession() async {
+    final user = _firebaseAuth.currentUser;
+    if (user == null) {
+      currentAdmin.value = null;
+      return false;
+    }
+
+    try {
+      final userDoc = await _firestore.collection('users').doc(user.uid).get();
+      if (!userDoc.exists) {
+        await _firebaseAuth.signOut();
+        currentAdmin.value = null;
+        return false;
+      }
+
+      final model = UserModel.fromJson(userDoc.data()!);
+      if (!model.isAdmin) {
+        await _firebaseAuth.signOut();
+        currentAdmin.value = null;
+        return false;
+      }
+
+      currentAdmin.value = model;
+      return true;
+    } catch (_) {
+      currentAdmin.value = null;
+      return false;
+    }
+  }
+
   Future<bool> adminLogin({
     required String email,
     required String password,
@@ -81,7 +111,7 @@ class LoginController extends GetxController {
   }) async {
     createDoctorStatus.value = AuthRequestStatus.loading;
 
-    FirebaseApp? secondaryApp;
+    late FirebaseApp secondaryApp;
 
     try {
       try {

@@ -41,7 +41,6 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
       }
 
       Get.offAll(() => const AdminDashboardScreen());
-      _showMessage('Welcome back, admin.', isError: false);
     } catch (error) {
       _showMessage(error.toString().replaceFirst('Exception: ', ''));
     }

@@ -75,6 +75,24 @@ class AdminDashboardScreen extends StatelessWidget {
 
               final lectures = lecturesSnapshot.data!.docs;
               final isCompact = MediaQuery.of(context).size.width < 980;
+              final uniqueCourses = lectures
+                  .map((lecture) => lecture.data()['courseCode']?.toString() ?? '')
+                  .where((course) => course.isNotEmpty)
+                  .toSet()
+                  .length;
+              final totalAttendanceMarks = lectures.fold<int>(
+                0,
+                (sum, lecture) {
+                  final attendancePerDay = Map<String, dynamic>.from(
+                    lecture.data()['attendancePerDay'] ?? const {},
+                  );
+                  final marks = attendancePerDay.values.fold<int>(
+                    0,
+                    (inner, value) => inner + List<String>.from(value).length,
+                  );
+                  return sum + marks;
+                },
+              );
 
               return SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
@@ -105,6 +123,20 @@ class AdminDashboardScreen extends StatelessWidget {
                           subtitle: 'Lecture documents in Firestore',
                           icon: Icons.menu_book_rounded,
                           color: const Color(0xFFEA580C),
+                        ),
+                        _StatCard(
+                          title: 'Courses',
+                          value: uniqueCourses.toString(),
+                          subtitle: 'Unique course codes across lectures',
+                          icon: Icons.school_outlined,
+                          color: const Color(0xFF7C3AED),
+                        ),
+                        _StatCard(
+                          title: 'Attendance Marks',
+                          value: totalAttendanceMarks.toString(),
+                          subtitle: 'Saved attendance records across all days',
+                          icon: Icons.how_to_reg_rounded,
+                          color: const Color(0xFF027A48),
                         ),
                       ],
                     ),
@@ -249,6 +281,13 @@ class _LecturesCard extends StatelessWidget {
                 final daysOfWeek = List<String>.from(data['daysOfWeek'] ?? const []);
                 final attendancePerDay =
                     Map<String, dynamic>.from(data['attendancePerDay'] ?? const {});
+                final courseCode = data['courseCode']?.toString() ?? 'No course code';
+                final section = data['section']?.toString() ?? 'No section';
+                final room = data['room']?.toString() ?? 'No room';
+                final attendanceMarks = attendancePerDay.values.fold<int>(
+                  0,
+                  (sum, value) => sum + List<String>.from(value).length,
+                );
 
                 return Container(
                   margin: const EdgeInsets.only(bottom: 16),
@@ -267,7 +306,7 @@ class _LecturesCard extends StatelessWidget {
                           ),
                     ),
                     subtitle: Text(
-                      '${_formatDate(data['dateTime'])} • $doctor',
+                      '${_formatDate(data['dateTime'])} - $doctor - $courseCode',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             color: const Color(0xFF667085),
                           ),
@@ -279,6 +318,9 @@ class _LecturesCard extends StatelessWidget {
                         children: [
                           _MetaBox(label: 'Lecture ID', value: lecture.id),
                           _MetaBox(label: 'Doctor', value: doctor),
+                          _MetaBox(label: 'Course Code', value: courseCode),
+                          _MetaBox(label: 'Section', value: section),
+                          _MetaBox(label: 'Room', value: room),
                           _MetaBox(
                             label: 'QR Hash',
                             value: data['qrHash']?.toString() ?? 'No QR hash',
@@ -286,6 +328,10 @@ class _LecturesCard extends StatelessWidget {
                           _MetaBox(
                             label: 'Days',
                             value: daysOfWeek.isEmpty ? 'Not set' : daysOfWeek.join(', '),
+                          ),
+                          _MetaBox(
+                            label: 'Attendance Marks',
+                            value: attendanceMarks.toString(),
                           ),
                         ],
                       ),
@@ -349,7 +395,7 @@ class _LecturesCard extends StatelessWidget {
     final hour = date.hour % 12 == 0 ? 12 : date.hour % 12;
     final minute = date.minute.toString().padLeft(2, '0');
     final suffix = date.hour >= 12 ? 'PM' : 'AM';
-    return '${months[date.month - 1]} ${date.day}, ${date.year} • $hour:$minute $suffix';
+    return '${months[date.month - 1]} ${date.day}, ${date.year} - $hour:$minute $suffix';
   }
 }
 
@@ -482,20 +528,20 @@ class _CreateDoctorDialogState extends State<_CreateDoctorDialog> {
       );
       if (!mounted) return;
       Navigator.of(context).pop();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: Color(0xFF0F766E),
-          content: Text('Doctor account created successfully.'),
-        ),
+      Get.snackbar(
+        'Success',
+        'Doctor account created successfully.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: const Color(0xFF0F766E),
+        colorText: Colors.white,
       );
     } catch (error) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: const Color(0xFFB42318),
-          content: Text(error.toString().replaceFirst('Exception: ', '')),
-        ),
+      Get.snackbar(
+        'Error',
+        error.toString().replaceFirst('Exception: ', ''),
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: const Color(0xFFB42318),
+        colorText: Colors.white,
       );
     }
   }

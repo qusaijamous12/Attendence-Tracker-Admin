@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import 'admin_dashboard_screen.dart';
 import 'admin_login_screen.dart';
 import 'firebase_options.dart';
 import 'login_controller.dart';
@@ -35,7 +36,29 @@ class MyApp extends StatelessWidget {
         scaffoldBackgroundColor: const Color(0xFFF5F7FB),
         textTheme: GoogleFonts.outfitTextTheme(),
       ),
-      home: const AdminLoginScreen(),
+      home: const AdminRoot(),
+    );
+  }
+}
+
+class AdminRoot extends StatelessWidget {
+  const AdminRoot({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = Get.find<LoginController>(tag: 'login_controller');
+
+    return FutureBuilder<bool>(
+      future: controller.restoreSession(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        return snapshot.data! ? const AdminDashboardScreen() : const AdminLoginScreen();
+      },
     );
   }
 }
